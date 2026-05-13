@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>نايف للأغذية - تقرير الصلاحية واختلاف الرصيد</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', 'Tahoma', 'Roboto', sans-serif; }
@@ -16,24 +18,25 @@
         .company-name { font-size: 1.8rem; font-weight: 800; color: #b32b2b; }
         .sub { color: #2c3e66; font-weight: 600; }
         .upload-grid { background: #f0f2f5; border-radius: 28px; padding: 20px; margin-bottom: 30px; }
-        .days-upload { display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; }
-        .day-card { flex: 1; min-width: 160px; background: white; border-radius: 20px; padding: 15px 12px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
-        .day-card label { font-weight: 700; display: block; margin-bottom: 12px; background: #d32f2f20; padding: 6px; border-radius: 40px; color: #a12222; }
-        .day-card input { display: block; width: 100%; margin-top: 8px; padding: 8px; border-radius: 30px; border: 1px solid #ccc; font-size: 0.8rem; }
+        .days-flex { display: flex; flex-wrap: wrap; gap: 25px; justify-content: space-between; }
+        .day-group { flex: 1; min-width: 260px; background: white; border-radius: 24px; padding: 18px 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-right: 4px solid #d32f2f; }
+        .day-group h3 { font-size: 1.3rem; margin-bottom: 15px; color: #b32b2b; border-right: 3px solid #d32f2f; padding-right: 12px; }
+        .file-field { margin-bottom: 18px; }
+        .file-field label { font-weight: 700; display: block; margin-bottom: 8px; background: #fef2f0; padding: 6px 12px; border-radius: 30px; color: #a12222; font-size: 0.85rem; }
+        .file-field input { display: block; width: 100%; padding: 8px 12px; border-radius: 30px; border: 1px solid #ccc; font-size: 0.8rem; background: #fff; }
         .btn-analyze { background: linear-gradient(95deg, #d32f2f, #b71c1c); border: none; color: white; padding: 14px 32px; font-size: 1.2rem; font-weight: bold; border-radius: 60px; cursor: pointer; margin-top: 20px; width: 100%; transition: 0.2s; }
         .btn-analyze:hover { transform: scale(1.01); background: #b71c1c; }
         
-        /* تبويبات */
-        .tabs { display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; flex-wrap: wrap; }
         .tab-btn { background: none; border: none; padding: 12px 28px; font-size: 1rem; font-weight: 600; cursor: pointer; border-radius: 40px 40px 0 0; transition: 0.2s; color: #4a5568; }
         .tab-btn.active { background: #d32f2f; color: white; box-shadow: 0 -2px 0 white; }
         .tab-pane { display: none; animation: fade 0.3s ease; }
         .tab-pane.active { display: block; }
         @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
         
-        .alert-card { background: #fff5e8; border-right: 8px solid #ff9800; padding: 18px 24px; border-radius: 24px; margin-bottom: 20px; }
-        .alert-title { font-size: 1.4rem; font-weight: bold; color: #bf5e00; margin-bottom: 12px; }
-        .alert-list { list-style: none; max-height: 500px; overflow-y: auto; }
+        .alert-card { background: #fff5e8; border-right: 8px solid #ff9800; border-radius: 24px; margin-bottom: 20px; }
+        .alert-title { font-size: 1.4rem; font-weight: bold; color: #bf5e00; margin-bottom: 12px; padding: 18px 24px 0 24px; }
+        .alert-list { list-style: none; max-height: 500px; overflow-y: auto; padding: 0 24px 18px 24px; }
         .alert-list li { background: #fff0db; margin: 8px 0; padding: 12px 18px; border-radius: 50px; font-weight: 500; border-right: 4px solid #ff9800; }
         .diff-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         .diff-table th { background: #2c3e66; color: white; padding: 10px; }
@@ -41,19 +44,16 @@
         .badge-warning { background: #ff9800; color: white; border-radius: 30px; padding: 4px 12px; font-size: 0.7rem; font-weight: bold; display: inline-block; margin: 2px; }
         .badge-expired { background: #d32f2f; color: white; border-radius: 30px; padding: 4px 12px; }
         footer { margin-top: 40px; text-align: center; font-size: 0.75rem; color: #5a6e85; border-top: 1px solid #ddd; padding-top: 20px; }
-        @media (max-width: 780px) { .container { padding: 16px; } .company-name { font-size: 1.2rem; } .tab-btn { padding: 8px 16px; } }
+        @media (max-width: 780px) { .container { padding: 16px; } .company-name { font-size: 1.2rem; } .tab-btn { padding: 8px 16px; } .day-group { min-width: 100%; } }
         
-        /* توقيع المطور - بسيط */
-        .signature-card {
-            position: fixed; bottom: 16px; left: 16px;
-            background: #e9ecef; color: #2c3e66;
-            padding: 8px 14px; border-radius: 20px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-            font-size: 0.7rem; font-weight: 500; z-index: 1000;
-            text-decoration: none; display: inline-block; border: 1px solid #cddae9;
-        }
+        .export-buttons { display: flex; gap: 15px; margin-bottom: 20px; justify-content: flex-start; flex-wrap: wrap; }
+        .export-btn { background: #2c3e66; color: white; border: none; padding: 10px 20px; border-radius: 40px; font-weight: bold; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+        .export-btn.pdf-expiry { background: #2c3e66; }
+        .export-btn.pdf-diff { background: #1e5a3a; }
+        .export-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+        
+        .signature-card { position: fixed; bottom: 16px; left: 16px; background: #e9ecef; color: #2c3e66; padding: 8px 14px; border-radius: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); font-size: 0.7rem; font-weight: 500; z-index: 1000; text-decoration: none; display: inline-block; border: 1px solid #cddae9; }
         .signature-card:hover { transform: scale(1.02); background: #dce3ec; }
-        .signature-card .name { font-size: 0.8rem; font-weight: 600; }
         @media (max-width: 768px) { .signature-card { position: relative; bottom: auto; left: auto; margin: 20px auto 0; width: fit-content; } }
         @media print { .signature-card { display: none; } }
     </style>
@@ -62,33 +62,37 @@
 <div class="container">
     <div class="header">
         <div class="logo-area">
-            <img src="https://i.postimg.cc/NM2zJWZD/NAIF-LOGO.jpg" alt="Naif Logo" onerror="this.src='https://via.placeholder.com/70?text=NAIF'">
+            <img src="https://i.postimg.cc/NM2zJWZD/NAIF-LOGO.jpg" alt="Naif Logo" id="companyLogoImg" onerror="this.src='https://via.placeholder.com/70?text=NAIF'">
             <div><div class="company-name">شركة نايف للأغذية</div><div class="sub">نظام تتبع الصلاحية والرصيد</div></div>
         </div>
         <div><i class="fas fa-chart-line" style="font-size: 2rem; color:#d32f2f;"></i></div>
     </div>
+    
     <div class="upload-grid">
-        <div class="days-upload" id="daysUploadContainer"></div>
+        <div class="days-flex" id="daysUploadContainer"></div>
         <button class="btn-analyze" id="analyzeBtn"><i class="fas fa-cogs"></i> تحليل الملفات (تتبع الصلاحية والرصيد)</button>
-        <div style="font-size:12px; margin-top:12px; color:#555;">✅ يتم التعامل مع الفاصلة العشرية (مثل 2,0565). الصلاحية: الرصيد الافتتاحي يصلح ليومين، الاستلام الجديد يصلح ليومين من يوم الاستلام.</div>
+        <div style="font-size:12px; margin-top:12px; color:#555;">✅ يتم دمج ملفي كل يوم تلقائياً (الرئيسي + 24 ساعة). الصلاحية: الرصيد الافتتاحي يصلح ليومين، الاستلام الجديد يصلح ليومين من يوم الاستلام.</div>
     </div>
 
-    <!-- أزرار التبويب -->
     <div class="tabs">
-        <button class="tab-btn active" data-tab="expiry">⚠️ مشاكل الصلاحية (انتهاء الصلاحية)</button>
+        <button class="tab-btn active" data-tab="expiry">⚠️ مشاكل الصلاحية (مطلوب المتابعة)</button>
         <button class="tab-btn" data-tab="diff">📊 اختلافات الرصيد المحسوب عن الفعلي</button>
     </div>
 
-    <!-- صفحة مشاكل الصلاحية -->
     <div id="expiryPane" class="tab-pane active">
+        <div class="export-buttons">
+            <button id="exportExpiryPdfBtn" class="export-btn pdf-expiry"><i class="fas fa-file-pdf"></i> تصدير تقرير الصلاحية PDF (أفقي)</button>
+        </div>
         <div class="alert-card">
-            <div class="alert-title"><i class="fas fa-hourglass-end"></i> المنتجات التي انتهت صلاحيتها أو لم يُحسم مصيرها</div>
+            <div class="alert-title"><i class="fas fa-hourglass-end"></i> المنتجات التي انتهت صلاحيتها أو مطلوب متابعتها (لم يتم استخدامها)</div>
             <ul class="alert-list" id="expiryAlertList"><li style="background:transparent;">لم يتم رفع ملفات بعد</li></ul>
         </div>
     </div>
 
-    <!-- صفحة اختلاف الرصيد المحسوب -->
     <div id="diffPane" class="tab-pane">
+        <div class="export-buttons">
+            <button id="exportDiffPdfBtn" class="export-btn pdf-diff"><i class="fas fa-file-pdf"></i> تصدير تقرير اختلاف الرصيد PDF (رأسي)</button>
+        </div>
         <div class="alert-card" style="border-right-color: #2196F3;">
             <div class="alert-title"><i class="fas fa-calculator"></i> سجل الاختلافات بين الرصيد المحسوب والرصيد الفعلي End Qty</div>
             <table class="diff-table" id="diffTable">
@@ -105,17 +109,16 @@
 </a>
 
 <script>
-    // دالة تحويل الأرقام (تدعم الفاصلة العشرية)
+    // دالة تحويل الأرقام (تدعم الفاصلة)
     function safeParseNumber(value) {
         if (value === undefined || value === null || value === "") return 0;
         let str = value.toString().trim();
-        str = str.replace(/,/g, '.');      // تحويل الفاصلة إلى نقطة
+        str = str.replace(/,/g, '.');
         str = str.replace(/[^0-9.-]/g, '');
         let num = parseFloat(str);
         return isNaN(num) ? 0 : num;
     }
 
-    // قائمة الأصناف المستهدفة
     const TARGET_PRODUCTS = new Set([
         "Beef Burger Big(برجر لحم كبير)", "Beef Burger Small(برجر لحم صغير)", "Chicken Burger Small  ( برجر دجاج صغير)",
         "Chicken Nuggets( ناجيت تمبورا)", "French Fries 6×6 LW ( شبس لامب وستون)", "Twister Fries LW (بطاط حلزونية تويستر)",
@@ -132,39 +135,28 @@
         "Royal Grilled Chicken (دجاج شواية ملكي)", "Sish Tawouk  ( شيش طاووق)"
     ]);
 
-    // إنشاء أزرار رفع الأيام (5 أيام)
+    // إنشاء أيام 1 و 2 و 3 فقط مع حقلين لكل يوم
     const daysContainer = document.getElementById('daysUploadContainer');
-    for (let i = 1; i <= 5; i++) {
-        const div = document.createElement('div');
-        div.className = 'day-card';
-        div.innerHTML = `<label><i class="far fa-calendar-alt"></i> اليوم ${i}</label>
-                         <input type="file" accept=".xlsx, .xls, .csv" id="fileDay${i}" />`;
-        daysContainer.appendChild(div);
+    const dayLabels = ["الأول", "الثاني", "الثالث"];
+    for (let i = 1; i <= 3; i++) {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'day-group';
+        groupDiv.innerHTML = `
+            <h3><i class="far fa-calendar-alt"></i> اليوم ${dayLabels[i-1]}</h3>
+            <div class="file-field">
+                <label><i class="fas fa-upload"></i> الملف الرئيسي - اليوم ${dayLabels[i-1]}</label>
+                <input type="file" accept=".xlsx, .xls, .csv" id="fileDay${i}_main" />
+            </div>
+            <div class="file-field">
+                <label><i class="fas fa-clock"></i> اليوم ${dayLabels[i-1]} لمطاعم 24 ساعة</label>
+                <input type="file" accept=".xlsx, .xls, .csv" id="fileDay${i}_24h" />
+            </div>
+        `;
+        daysContainer.appendChild(groupDiv);
     }
 
-    // البحث عن صف العناوين في الجدول
-    function findHeaderRow(rows) {
-        const keywords = ["RMName", "Start Qty", "Recd. Qty", "Act. Usage"];
-        let bestRow = -1, bestScore = 0;
-        for (let i = 0; i < Math.min(rows.length, 80); i++) {
-            const row = rows[i];
-            if (!row) continue;
-            let score = 0;
-            for (let col = 0; col < row.length; col++) {
-                const cell = (row[col] || "").toString().trim();
-                if (keywords.some(kw => cell.includes(kw))) score++;
-            }
-            if (score > bestScore && score >= 2) { bestScore = score; bestRow = i; }
-        }
-        if (bestRow !== -1) return bestRow;
-        for (let i = 0; i < rows.length; i++) {
-            if (rows[i] && rows[i].some(c => (c || "").toString().includes("RMName"))) return i;
-        }
-        return -1;
-    }
-
-    // تحليل الملف واستخراج المعاملات للأصناف المستهدفة
-    async function parseExcelToTransactions(file) {
+    // دالة تحليل ملف واحد واستخراج الخريطة (product -> aggregated tx)
+    async function parseSingleFileToMap(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -173,8 +165,29 @@
                 const sheet = workbook.Sheets[workbook.SheetNames[0]];
                 const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
                 if (!rows || rows.length < 3) reject("الملف فارغ أو غير صالح");
+                
+                function findHeaderRow(rows) {
+                    const keywords = ["RMName", "Start Qty", "Recd. Qty", "Act. Usage"];
+                    let bestRow = -1, bestScore = 0;
+                    for (let i = 0; i < Math.min(rows.length, 80); i++) {
+                        const row = rows[i];
+                        if (!row) continue;
+                        let score = 0;
+                        for (let col = 0; col < row.length; col++) {
+                            const cell = (row[col] || "").toString().trim();
+                            if (keywords.some(kw => cell.includes(kw))) score++;
+                        }
+                        if (score > bestScore && score >= 2) { bestScore = score; bestRow = i; }
+                    }
+                    if (bestRow !== -1) return bestRow;
+                    for (let i = 0; i < rows.length; i++) {
+                        if (rows[i] && rows[i].some(c => (c || "").toString().includes("RMName"))) return i;
+                    }
+                    return -1;
+                }
+                
                 const headerIdx = findHeaderRow(rows);
-                if (headerIdx === -1) reject("لم يتم العثور على رأس الجدول (RMName, Start Qty...)");
+                if (headerIdx === -1) reject("لم يتم العثور على رأس الجدول");
                 const headers = rows[headerIdx].map(c => (c || "").toString().trim());
                 const idx = {
                     rmName: headers.findIndex(h => h.includes("RMName")),
@@ -189,7 +202,8 @@
                     uomName: headers.findIndex(h => h.includes("UOM Name"))
                 };
                 if (idx.rmName === -1 || idx.startQty === -1) reject("الأعمدة الأساسية مفقودة");
-                const transactions = new Map();
+                
+                const productMap = new Map(); // product -> object
                 for (let r = headerIdx+1; r < rows.length; r++) {
                     const row = rows[r];
                     if (!row || row.length < 2) continue;
@@ -204,61 +218,105 @@
                     const endQty = idx.endQty !== -1 ? safeParseNumber(row[idx.endQty]) : 0;
                     const returnQty = idx.returnQty !== -1 ? safeParseNumber(row[idx.returnQty]) : 0;
                     const uom = (idx.uomName !== -1 && row[idx.uomName]) ? row[idx.uomName].toString().trim() : "وحدة";
-                    transactions.set(product, { startQty: start, recdQty: recd, actUsage, tranIn, tranOut, wasteQty: waste, endQty, returnQty, uom });
+                    
+                    if (!productMap.has(product)) {
+                        productMap.set(product, { startQty:0, recdQty:0, actUsage:0, tranIn:0, tranOut:0, wasteQty:0, endQty:0, returnQty:0, uom });
+                    }
+                    const existing = productMap.get(product);
+                    existing.startQty += start;
+                    existing.recdQty += recd;
+                    existing.actUsage += actUsage;
+                    existing.tranIn += tranIn;
+                    existing.tranOut += tranOut;
+                    existing.wasteQty += waste;
+                    existing.returnQty += returnQty;
+                    if (endQty !== 0) existing.endQty = endQty; // آخر قيمة غير صفرية تعتبر الفعلي
+                    if (uom) existing.uom = uom;
                 }
-                resolve(transactions);
+                resolve(productMap);
             };
             reader.onerror = err => reject(err);
             reader.readAsArrayBuffer(file);
         });
     }
 
+    // دمج عدة ملفات لنفس اليوم (قائمة files[] -> خريطة واحدة)
+    async function mergeFilesPerDay(filesArray) {
+        if (!filesArray.length) return new Map();
+        let mergedMap = new Map();
+        for (const file of filesArray) {
+            try {
+                const fileMap = await parseSingleFileToMap(file);
+                for (let [prod, data] of fileMap.entries()) {
+                    if (!mergedMap.has(prod)) {
+                        mergedMap.set(prod, { ...data });
+                    } else {
+                        const target = mergedMap.get(prod);
+                        target.startQty += data.startQty;
+                        target.recdQty += data.recdQty;
+                        target.actUsage += data.actUsage;
+                        target.tranIn += data.tranIn;
+                        target.tranOut += data.tranOut;
+                        target.wasteQty += data.wasteQty;
+                        target.returnQty += data.returnQty;
+                        if (data.endQty !== 0) target.endQty = data.endQty;
+                        if (data.uom) target.uom = data.uom;
+                    }
+                }
+            } catch(err) { throw err; }
+        }
+        return mergedMap;
+    }
+
     class Lot { constructor(qty, expiryDay) { this.quantity = qty; this.expiryDay = expiryDay; } }
 
-    // التحليل الرئيسي: يعيد كائن { expiryAlerts, diffRecords }
     async function runAnalysis(filesPerDay) {
         const daysData = [];
         for (let i = 0; i < filesPerDay.length; i++) {
-            if (!filesPerDay[i].file) continue;
+            const dayIdx = i+1;
+            if (!filesPerDay[i].files || filesPerDay[i].files.length === 0) continue;
             try {
-                const txMap = await parseExcelToTransactions(filesPerDay[i].file);
-                daysData.push({ dayIdx: i+1, transactions: txMap });
-            } catch(err) { alert(`خطأ باليوم ${filesPerDay[i].dayIndex}: ${err.message}`); return null; }
+                const mergedTx = await mergeFilesPerDay(filesPerDay[i].files);
+                daysData.push({ dayIdx: dayIdx, transactions: mergedTx });
+            } catch(err) { alert(`خطأ بدمج ملفات اليوم ${dayIdx}: ${err.message}`); return null; }
         }
-        if (daysData.length === 0) { alert("لا توجد ملفات صالحة"); return null; }
-
+        if (daysData.length === 0) { alert("لا توجد ملفات صالحة (يجب رفع ملف رئيسي أو ملف 24 ساعة على الأقل ليوم واحد)"); return null; }
+        
         const allProducts = new Set();
         daysData.forEach(d => { for (let p of d.transactions.keys()) allProducts.add(p); });
         if (allProducts.size === 0) { alert("لم يتم العثور على أصناف من القائمة"); return null; }
-
+        
         const productState = new Map(); // product -> { lots: [], uom: string }
         for (let p of allProducts) productState.set(p, { lots: [], uom: "" });
-        const expiryAlerts = [];    // قائمة تنبيهات الصلاحية (نص)
-        const diffRecords = [];     // سجلات الاختلاف: { day, product, calculated, actual, diff }
-
+        const expiryAlerts = [];
+        const diffRecords = [];
+        
         for (let dayIdx = 0; dayIdx < daysData.length; dayIdx++) {
-            const currentDay = dayIdx + 1;
+            const currentDay = daysData[dayIdx].dayIdx;
             const dayTx = daysData[dayIdx].transactions;
-
-            // تحديث وحدات القياس
+            
+            // تحديث الوحدات
             for (let [prod, tx] of dayTx.entries()) {
                 if (productState.has(prod) && tx.uom) productState.get(prod).uom = tx.uom;
             }
-
+            
             for (let [prod, state] of productState.entries()) {
                 const tx = dayTx.get(prod);
                 if (!tx) continue;
-
-                // اليوم الأول: إنشاء دفعة من Start Qty (تنتهي صلاحيتها بعد يومين من اليوم الأول: expiry = currentDay + 1)
+                
+                // اليوم الأول: دفعة من Start Qty (تصلح لليوم الحالي + اليوم التالي => expiry = currentDay + 1)
                 if (currentDay === 1 && state.lots.length === 0 && tx.startQty > 0) {
                     state.lots.push(new Lot(tx.startQty, currentDay + 1));
+                } else if (currentDay === 1 && state.lots.length === 0 && tx.startQty === 0) {
+                    // لا شيء
                 }
-                // الواردات (استلام + تحويل داخلي + مرتجع) صلاحيتها يومين من اليوم الحالي
+                
+                // الواردات (استلام + تحويل داخلي + مرتجع) صلاحيتها يومين من اليوم الحالي (اليوم الحالي + 2)
                 let totalIn = tx.recdQty + tx.tranIn + tx.returnQty;
                 if (totalIn > 0) {
                     state.lots.push(new Lot(totalIn, currentDay + 2));
                 }
-
+                
                 // الخصم (استهلاك + تحويل خارج + تالف)
                 let totalOut = tx.actUsage + tx.tranOut + tx.wasteQty;
                 let toConsume = totalOut;
@@ -271,19 +329,19 @@
                     if (lot.quantity > 0) newLots.push(lot);
                 }
                 state.lots = newLots;
-
-                // فحص الكميات المنتهية صلاحيتها (expiryDay < currentDay) وتوليد تنبيهات الصلاحية
+                
+                // فحص الكميات المنتهية (expiryDay < currentDay) وتغيير النص إلى "مطلوب المتابعة للكمية - لم يتم استخدامها"
                 let remainingLots = [];
                 for (let lot of state.lots) {
                     if (lot.expiryDay < currentDay) {
-                        expiryAlerts.push(`⚠️ [اليوم ${currentDay}] صنف "${prod}" : كمية (${lot.quantity.toFixed(3)} ${state.uom}) منتهية الصلاحية ولم يتم استخدامها/تحويلها/إتلافها.`);
+                        expiryAlerts.push(`⚠️ [اليوم ${currentDay}] صنف "${prod}" : كمية (${lot.quantity.toFixed(3)} ${state.uom}) - مطلوب المتابعة للكمية - لم يتم استخدامها (انتهت صلاحيتها).`);
                     } else {
                         remainingLots.push(lot);
                     }
                 }
                 state.lots = remainingLots;
-
-                // حساب الرصيد المحسوب ومقارنته مع End Qty
+                
+                // حساب الرصيد المحسوب ومقارنة مع الفعلي
                 const calculatedEnd = state.lots.reduce((s, l) => s + l.quantity, 0);
                 if (Math.abs(calculatedEnd - tx.endQty) > 0.05) {
                     diffRecords.push({
@@ -295,14 +353,14 @@
                     });
                 }
             }
-
-            // الأصناف التي لا تظهر في هذا اليوم: فقط فحص صلاحية دفعاتها
+            
+            // الأصناف غير الموجودة في اليوم: فحص صلاحية فقط
             for (let [prod, state] of productState.entries()) {
                 if (dayTx.has(prod)) continue;
                 let updated = [];
                 for (let lot of state.lots) {
                     if (lot.expiryDay < currentDay) {
-                        expiryAlerts.push(`⚠️ [اليوم ${currentDay}] صنف "${prod}" : رصيد (${lot.quantity.toFixed(3)} ${state.uom}) منتهي الصلاحية دون استهلاك أو تحويل.`);
+                        expiryAlerts.push(`⚠️ [اليوم ${currentDay}] صنف "${prod}" : رصيد (${lot.quantity.toFixed(3)} ${state.uom}) - مطلوب المتابعة للكمية - لم يتم استخدامها (انتهت صلاحيتها).`);
                     } else {
                         updated.push(lot);
                     }
@@ -310,33 +368,28 @@
                 state.lots = updated;
             }
         }
-
-        // بعد نهاية كل الأيام: رصد أي كمية متبقية منتهية الصلاحية (expiryDay <= lastDay)
-        const lastDay = daysData.length;
+        
+        const lastDay = daysData.length > 0 ? daysData[daysData.length-1].dayIdx : 0;
         for (let [prod, state] of productState.entries()) {
             for (let lot of state.lots) {
                 if (lot.expiryDay <= lastDay) {
-                    expiryAlerts.push(`⚠️ بعد انتهاء الفترة: صنف "${prod}" لديه رصيد (${lot.quantity.toFixed(3)} ${state.uom}) منتهي الصلاحية ولم يتم التخلص منه.`);
+                    expiryAlerts.push(`⚠️ بعد انتهاء الفترة: صنف "${prod}" لديه رصيد (${lot.quantity.toFixed(3)} ${state.uom}) - مطلوب المتابعة للكمية - لم يتم استخدامها (منتهي الصلاحية).`);
                 }
             }
         }
         return { expiryAlerts, diffRecords };
     }
-
-    // عرض النتائج في الصفحتين
+    
     function renderResults(result) {
         if (!result) return;
         const { expiryAlerts, diffRecords } = result;
-
-        // صفحة الصلاحية
         const expiryList = document.getElementById('expiryAlertList');
         if (expiryAlerts.length === 0) {
             expiryList.innerHTML = '<li style="background:#e8f5e9; color:#2e7d32;"><i class="fas fa-check-circle"></i> لا توجد مشاكل صلاحية. جميع المنتجات تم استهلاكها ضمن الفترة المسموحة.</li>';
         } else {
             expiryList.innerHTML = expiryAlerts.map(alert => `<li><i class="fas fa-exclamation-triangle"></i> ${alert}</li>`).join('');
         }
-
-        // صفحة اختلافات الرصيد
+        
         const diffTbody = document.getElementById('diffTbody');
         if (diffRecords.length === 0) {
             diffTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">✔️ جميع الأرصدة المحسوبة متطابقة مع End Qty</td></tr>';
@@ -351,22 +404,94 @@
                 </tr>
             `).join('');
         }
+        window.currentResult = result;
     }
-
-    // تجميع الملفات والتحليل
+    
     document.getElementById('analyzeBtn').addEventListener('click', async () => {
-        const filesArr = [];
-        for (let i = 1; i <= 5; i++) {
-            const inp = document.getElementById(`fileDay${i}`);
-            if (inp.files.length > 0) filesArr.push({ dayIndex: i, file: inp.files[0] });
+        const filesPerDay = [];
+        for (let i = 1; i <= 3; i++) {
+            const mainInput = document.getElementById(`fileDay${i}_main`);
+            const input24 = document.getElementById(`fileDay${i}_24h`);
+            const files = [];
+            if (mainInput.files.length) files.push(mainInput.files[0]);
+            if (input24.files.length) files.push(input24.files[0]);
+            filesPerDay.push({ dayIndex: i, files: files });
         }
-        if (filesArr.length === 0) { alert("يرجى رفع ملف واحد على الأقل"); return; }
-        filesArr.sort((a,b) => a.dayIndex - b.dayIndex);
-        const result = await runAnalysis(filesArr);
+        const hasAny = filesPerDay.some(f => f.files.length > 0);
+        if (!hasAny) { alert("يرجى رفع ملف رئيسي أو ملف 24 ساعة ليوم واحد على الأقل"); return; }
+        const result = await runAnalysis(filesPerDay);
         if (result) renderResults(result);
     });
-
-    // تبديل التبويبات
+    
+    // تصدير PDF للصلاحية (أفقي مع شعار واسم الشركة)
+    async function exportExpiryPDF() {
+        if (!window.currentResult || window.currentResult.expiryAlerts.length === 0) { alert("لا توجد بيانات صلاحية لتصديرها"); return; }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const logoImg = document.getElementById('companyLogoImg');
+        let logoData = '';
+        if (logoImg && logoImg.src) {
+            try { logoData = await new Promise((res) => { const img = new Image(); img.crossOrigin = "Anonymous"; img.onload = () => { const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0); res(canvas.toDataURL('image/png')); }; img.onerror = () => res(''); img.src = logoImg.src; }); } catch(e) { logoData = ''; }
+        }
+        doc.addImage(logoData, 'PNG', 10, 10, 35, 20);
+        doc.setFontSize(20); doc.setTextColor(180, 40, 40);
+        doc.text("شركة نايف للأغذية", 70, 20);
+        doc.setFontSize(14); doc.setTextColor(50,50,50);
+        doc.text("تقرير مشاكل الصلاحية - مطلوب المتابعة للكمية", 70, 32);
+        doc.setFontSize(11);
+        let y = 45;
+        const alerts = window.currentResult.expiryAlerts;
+        for (let i = 0; i < alerts.length; i++) {
+            if (y > 190) { doc.addPage(); y = 20; doc.addImage(logoData, 'PNG', 10, 10, 30, 15); doc.text("شركة نايف للأغذية - تكملة تقرير الصلاحية", 50, 20); y = 40; }
+            const textLines = doc.splitTextToSize(alerts[i], 250);
+            doc.text(textLines, 15, y);
+            y += (textLines.length * 6) + 3;
+        }
+        doc.save("تقرير_الصلاحية_نايف.pdf");
+    }
+    
+    // تصدير PDF للرصيد (رأسي)
+    async function exportDiffPDF() {
+        if (!window.currentResult || window.currentResult.diffRecords.length === 0) { alert("لا توجد اختلافات في الرصيد لتصديرها"); return; }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const logoImg = document.getElementById('companyLogoImg');
+        let logoData = '';
+        if (logoImg && logoImg.src) {
+            try { logoData = await new Promise((res) => { const img = new Image(); img.crossOrigin = "Anonymous"; img.onload = () => { const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0); res(canvas.toDataURL('image/png')); }; img.onerror = () => res(''); img.src = logoImg.src; }); } catch(e) { logoData = ''; }
+        }
+        doc.addImage(logoData, 'PNG', 10, 8, 30, 18);
+        doc.setFontSize(18); doc.setTextColor(180, 40, 40);
+        doc.text("نايف للأغذية - اختلافات الرصيد", 50, 18);
+        doc.setFontSize(10);
+        let y = 35;
+        const headers = ["اليوم", "الصنف", "المحسوب", "الفعلي", "الفرق"];
+        doc.setFillColor(44, 62, 102); doc.setTextColor(255,255,255);
+        doc.rect(10, y, 190, 8, 'F');
+        doc.text(headers[0], 15, y+5);
+        doc.text(headers[1], 45, y+5);
+        doc.text(headers[2], 115, y+5);
+        doc.text(headers[3], 145, y+5);
+        doc.text(headers[4], 175, y+5);
+        doc.setTextColor(0,0,0);
+        y += 9;
+        const records = window.currentResult.diffRecords;
+        for (let rec of records) {
+            if (y > 270) { doc.addPage(); y = 20; doc.addImage(logoData, 'PNG', 10, 8, 25, 15); doc.text("نايف للأغذية - تكملة اختلافات الرصيد", 45, 18); y = 35; }
+            doc.text(`اليوم ${rec.day}`, 15, y);
+            let pname = rec.product.length > 28 ? rec.product.substring(0,25)+"..." : rec.product;
+            doc.text(pname, 45, y);
+            doc.text(rec.calculated.toFixed(3), 115, y);
+            doc.text(rec.actual.toFixed(3), 145, y);
+            doc.text((rec.diff>0?"+":"")+rec.diff.toFixed(3), 175, y);
+            y += 6;
+        }
+        doc.save("تقرير_اختلاف_الرصيد_نايف.pdf");
+    }
+    
+    document.getElementById('exportExpiryPdfBtn').addEventListener('click', exportExpiryPDF);
+    document.getElementById('exportDiffPdfBtn').addEventListener('click', exportDiffPDF);
+    
     const tabs = document.querySelectorAll('.tab-btn');
     const panes = { expiry: document.getElementById('expiryPane'), diff: document.getElementById('diffPane') };
     tabs.forEach(btn => {
