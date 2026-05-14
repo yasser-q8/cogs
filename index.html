@@ -41,18 +41,20 @@
         .diff-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         .diff-table th { background: #2c3e66; color: white; padding: 10px; }
         .diff-table td { border-bottom: 1px solid #e2e8f0; padding: 10px; background: #fff; }
-        .summary-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-        .summary-table th { background: #b32b2b; color: white; padding: 10px; font-size: 0.9rem; }
-        .summary-table td { border: 1px solid #ddd; padding: 8px; vertical-align: top; }
-        .summary-table tr.highlight { background-color: #ffecb3 !important; }
-        .summary-table .unused-col { background-color: #ffe0b2; font-weight: bold; color: #bf5e00; }
-        .day-separator { background: #d32f2f20; width: 10px; }
+        .summary-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 0.85rem; }
+        .summary-table th { background: #b32b2b; color: white; padding: 10px; }
+        .summary-table td { border: 1px solid #ddd; padding: 6px; vertical-align: middle; }
+        .summary-table tr.highlight { background-color: #fff0db; }
+        .day-separator { background: #fff; width: 10px; border: none; }
+        .unused-qty-col { background-color: #ffe0b2; font-weight: bold; color: #bf5e00; text-align: center; }
+        .note-col { background-color: #ffcc80; font-weight: bold; color: #b32b2b; text-align: center; }
         .export-buttons { display: flex; gap: 15px; margin-bottom: 20px; justify-content: flex-start; flex-wrap: wrap; }
         .export-btn { background: #2c3e66; color: white; border: none; padding: 10px 20px; border-radius: 40px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
         .export-btn.pdf-summary { background: #d32f2f; }
         .export-btn:hover { opacity: 0.85; transform: translateY(-1px); }
-        .signature-card { position: fixed; bottom: 16px; left: 16px; background: #e9ecef; padding: 8px 14px; border-radius: 20px; font-size: 0.7rem; font-weight: 500; z-index: 1000; text-decoration: none; color: #2c3e66; border: 1px solid #cddae9; }
-        @media (max-width: 1000px) { .summary-table { font-size: 12px; } .container { padding: 12px; } }
+        .signature-card { position: fixed; bottom: 16px; left: 16px; background: #e9ecef; padding: 8px 14px; border-radius: 20px; font-size: 0.7rem; font-weight: 500; z-index: 1000; text-decoration: none; color: #2c3e66; border: 1px solid #cddae9; display: flex; gap: 8px; align-items: center; }
+        .signature-card i { font-size: 0.9rem; }
+        @media (max-width: 1000px) { .summary-table { font-size: 11px; } .container { padding: 12px; } }
     </style>
 </head>
 <body>
@@ -71,42 +73,40 @@
     </div>
 
     <div class="tabs">
-        <button class="tab-btn active" data-tab="expiry">⚠️ مطلوب المتابعة</button>
+        <button class="tab-btn active" data-tab="summary">📋 ملخص الصلاحية اليومي (ثلاثة أيام)</button>
+        <button class="tab-btn" data-tab="expiry">⚠️ مطلوب المتابعة</button>
         <button class="tab-btn" data-tab="diff">📊 اختلافات الرصيد</button>
-        <button class="tab-btn" data-tab="summary">📋 ملخص الصلاحية اليومي (ثلاثة أيام)</button>
     </div>
 
-    <!-- تبويب مشاكل الصلاحية -->
-    <div id="expiryPane" class="tab-pane active">
+    <div id="summaryPane" class="tab-pane active">
+        <div class="export-buttons"><button id="exportSummaryPdfBtn" class="export-btn pdf-summary"><i class="fas fa-file-pdf"></i> تصدير ملخص الصلاحية PDF (أفقي)</button></div>
+        <div class="alert-card" style="border-right-color:#d32f2f; background:#fef7e0;">
+            <div class="alert-title"><i class="fas fa-chart-simple"></i> ملخص حركة الأصناف - الأيام الأول والثاني والثالث</div>
+            <div id="summaryTablesContainer" style="overflow-x:auto; padding:10px;"></div>
+        </div>
+    </div>
+
+    <div id="expiryPane" class="tab-pane">
         <div class="export-buttons"><button id="exportExpiryPdfBtn" class="export-btn"><i class="fas fa-file-pdf"></i> تصدير تقرير المتابعة PDF (أفقي)</button></div>
         <div class="alert-card"><div class="alert-title"><i class="fas fa-hourglass-end"></i> المنتجات المطلوب متابعتها (لم يتم استخدامها/تحويلها/إتلافها)</div>
         <ul class="alert-list" id="expiryAlertList"><li>لم يتم رفع ملفات بعد</li></ul></div>
     </div>
 
-    <!-- تبويب اختلافات الرصيد المحسوب -->
     <div id="diffPane" class="tab-pane">
         <div class="export-buttons"><button id="exportDiffPdfBtn" class="export-btn"><i class="fas fa-file-pdf"></i> تصدير تقرير اختلاف الرصيد PDF (رأسي)</button></div>
         <div class="alert-card" style="border-right-color:#2196F3;"><div class="alert-title"><i class="fas fa-calculator"></i> سجل الاختلافات بين الرصيد المحسوب والفعلي</div>
         <table class="diff-table" id="diffTable"><thead><tr><th>اليوم</th><th>الصنف</th><th>الرصيد المحسوب</th><th>الرصيد الفعلي</th><th>الفرق</th></tr></thead><tbody id="diffTbody"><tr><td colspan="5">لا توجد اختلافات</td></tr></tbody></table></div>
     </div>
-
-    <!-- التبويب الجديد: ملخص الصلاحية اليومي (ثلاثة أيام) -->
-    <div id="summaryPane" class="tab-pane">
-        <div class="export-buttons"><button id="exportSummaryPdfBtn" class="export-btn pdf-summary"><i class="fas fa-file-pdf"></i> تصدير ملخص الصلاحية PDF (أفقي)</button></div>
-        <div class="alert-card" style="border-right-color:#d32f2f; background:#fef7e0;">
-            <div class="alert-title"><i class="fas fa-chart-simple"></i> ملخص حركة الأصناف - اليوم الأول والثاني والثالث</div>
-            <div id="summaryTablesContainer" style="overflow-x:auto; padding:10px;"></div>
-        </div>
-    </div>
-    <footer>البيانات المدمجة من الملف الرئيسي وملف 24 ساعة لكل يوم. العمود الأخير يبرز الكميات التي لم يتم استخدامها/تحويلها/إتلافها (مطلوب متابعة).</footer>
+    <footer style="margin-top: 20px; font-size: 0.9rem; color: #555;">البيانات المدمجة من الملف الرئيسي وملف 24 ساعة لكل يوم. عمود "الكمية غير المستخدمة" يعرض الرصيد المتبقي بعد نهاية الفترة، وعمود "ملاحظة" يوضح الحالة.</footer>
 </div>
-<a href="https://yasser-q8.github.io/myprofile/#" class="signature-card" target="_blank">Yasser Elkhateeb 67011143 | مطور البرنامج</a>
+<a href="https://yasser-q8.github.io/myprofile/#" class="signature-card" target="_blank">
+    <i class="fas fa-code"></i> Yasser Elkhateeb 67011143 | مطور البرنامج
+</a>
 
 <script>
     function safeParseNumber(v) { if(v===undefined||v===null||v==="") return 0; let s=v.toString().trim().replace(/,/g,'.'); s=s.replace(/[^0-9.-]/g,''); let n=parseFloat(s); return isNaN(n)?0:n; }
     const TARGET_PRODUCTS = new Set(["Beef Burger Big(برجر لحم كبير)","Beef Burger Small(برجر لحم صغير)","Chicken Burger Small  ( برجر دجاج صغير)","Chicken Nuggets( ناجيت تمبورا)","French Fries 6×6 LW ( شبس لامب وستون)","Twister Fries LW (بطاط حلزونية تويستر)","Bint Al-Deek  ( بنت الديك)","Ch.Finger Fillet Spicy  ( اصابع فيليه فلفل)","Chicken Big Fillet  ( بيج فيلية)","Chicken Big Fillet Spicy  ( بيج فيلية فلفل)","Chicken Drum Stick ( درام ستيك)","Chicken Fillet  ( فيليه عادي)","Chicken Fillet Spicy  ( فيليه فلفل)","Chicken Finger Fillet  ( اصابع فيليه)","Chicken Fried  ( دجاج فرايد عادي)","Chicken Fried Spicy  (دجاج فرايد فلفل)","Chicken Kabab ( كباب دجاج)","Chicken Shawarma  ( شاورما دجاج)","Chicken Small Wings Nor  جناح صغير عادي","Chicken Small Wings Spicy  جناح صغير فلفل","Chicken Tikka ( دجاج تكا عادي)","Chicken Tikka Brest ( تكا صدور)","Chicken Tikka Thigh  (تكا فخذ)","Chicken Wings  جناح متبل","Fresh Burger Chickens برجر دجاج طازج","Grill Chicken Pc -Multi Taste ( قطع دجاج جرل صغير)","Grilled Chicken Fillet  فيليه مشوي","Grilled Chicken Pc / قطع دجاج مشويه","Grilled Quils (فري مشوي)","Half Boneless chicken -نصف دجاجة مسحب","Happy Chicken Pc  ( قطع دجاح فرايد صغير عادي)","Happy Chicken Pc-Spicy  ( قطع دجاح فرايد صغير فلفل)","Rooster Junior  ( فروج نايف)","Royal Grilled Chicken (دجاج شواية ملكي)","Sish Tawouk  ( شيش طاووق)"]);
 
-    // إنشاء أيام 1,2,3
     const daysContainer = document.getElementById('daysUploadContainer');
     for(let i=1;i<=3;i++){ const g=document.createElement('div'); g.className='day-group'; g.innerHTML=`<h3><i class="far fa-calendar-alt"></i> اليوم ${i===1?"الأول":i===2?"الثاني":"الثالث"}</h3><div class="file-field"><label><i class="fas fa-upload"></i> الملف الرئيسي</label><input type="file" accept=".xlsx,.xls,.csv" id="fileDay${i}_main" /></div><div class="file-field"><label><i class="fas fa-clock"></i> ملف 24 ساعة</label><input type="file" accept=".xlsx,.xls,.csv" id="fileDay${i}_24h" /></div>`; daysContainer.appendChild(g); }
 
@@ -126,29 +126,33 @@
     }
     async function mergeDayFiles(files){ if(!files.length) return new Map(); let merged=new Map(); for(let f of files){ const m=await parseFileToMap(f); for(let [prod,data] of m.entries()){ if(!merged.has(prod)) merged.set(prod,{...data}); else{ const t=merged.get(prod); t.startQty+=data.startQty; t.recdQty+=data.recdQty; t.actUsage+=data.actUsage; t.tranIn+=data.tranIn; t.tranOut+=data.tranOut; t.wasteQty+=data.wasteQty; t.returnQty+=data.returnQty; if(data.endQty!==0) t.endQty=data.endQty; if(data.uom) t.uom=data.uom; } } } return merged; }
 
-    // تحليل الصلاحية FIFO و alert (نفس السابق) + جمع بيانات الملخص الخام
     class Lot { constructor(qty,expiryDay){ this.qty=qty; this.expiryDay=expiryDay; } }
+    
     async function runFullAnalysis(filesPerDay){
         const daysDataRaw=[];
         for(let i=0;i<filesPerDay.length;i++){ if(!filesPerDay[i].files.length) continue; const merged=await mergeDayFiles(filesPerDay[i].files); daysDataRaw.push({dayIdx:i+1, transactions:merged}); }
         if(daysDataRaw.length===0){ alert("لا توجد ملفات"); return null; }
         const allProds=new Set(); daysDataRaw.forEach(d=>{ for(let p of d.transactions.keys()) allProds.add(p); });
         if(allProds.size===0){ alert("لا أصناف"); return null; }
-        const productState=new Map(); for(let p of allProds) productState.set(p,{lots:[], uom:""});
+        
+        const productState=new Map(); 
+        for(let p of allProds) productState.set(p,{lots:[], uom:""});
+        
         const expiryAlerts=[], diffRecords=[];
-        // حفظ بيانات الملخص لكل يوم (القيم الخام من الدمج)
-        const summaryPerDay=[]; // array of {dayIdx, rows: [{product, uom, start, recd, usage, tranIn, tranOut, waste, ret, end, totalIn, totalOut, netMovement}]}
+        const summaryPerDay=[];
+        const droppedLotsQty = new Map(); // لتتبع الكميات التي تنتهي صلاحيتها وتُسجل كـ غير مستخدمة
+        
         for(let day of daysDataRaw){
             const rows=[];
             for(let [prod,tx] of day.transactions.entries()){
                 const uom=tx.uom||"وحدة";
                 const totalIn=tx.recdQty+tx.tranIn+tx.returnQty;
                 const totalOut=tx.actUsage+tx.tranOut+tx.wasteQty;
-                rows.push({product:prod, uom, startQty:tx.startQty, recdQty:tx.recdQty, actUsage:tx.actUsage, tranIn:tx.tranIn, tranOut:tx.tranOut, wasteQty:tx.wasteQty, returnQty:tx.returnQty, endQty:tx.endQty, totalIn, totalOut, netMovement:totalIn-totalOut});
+                rows.push({product:prod, uom, startQty:tx.startQty, recdQty:tx.recdQty, actUsage:tx.actUsage, tranIn:tx.tranIn, tranOut:tx.tranOut, wasteQty:tx.wasteQty, returnQty:tx.returnQty, endQty:tx.endQty, totalIn, totalOut});
             }
             summaryPerDay.push({dayIdx:day.dayIdx, rows});
         }
-        // تنفيذ FIFO والصلاحية لاستخراج التنبيهات والاختلافات
+        
         for(let dayIdx=0;dayIdx<daysDataRaw.length;dayIdx++){
             const currentDay=daysDataRaw[dayIdx].dayIdx;
             const dayTx=daysDataRaw[dayIdx].transactions;
@@ -157,55 +161,94 @@
                 const tx=dayTx.get(prod); if(!tx) continue;
                 if(currentDay===1 && state.lots.length===0 && tx.startQty>0) state.lots.push(new Lot(tx.startQty, currentDay+1));
                 let totalIn=tx.recdQty+tx.tranIn+tx.returnQty; if(totalIn>0) state.lots.push(new Lot(totalIn, currentDay+2));
+                
                 let totalOut=tx.actUsage+tx.tranOut+tx.wasteQty; let toConsume=totalOut; let newLots=[];
-                for(let lot of state.lots){ if(toConsume<=0){ newLots.push(lot); continue; } let take=Math.min(lot.qty,toConsume); lot.qty-=take; toConsume-=take; if(lot.qty>0) newLots.push(lot); }
+                for(let lot of state.lots){ 
+                    if(toConsume<=0){ newLots.push(lot); continue; } 
+                    let take=Math.min(lot.qty,toConsume); 
+                    lot.qty-=take; toConsume-=take; 
+                    if(lot.qty>0) newLots.push(lot); 
+                }
                 state.lots=newLots;
-                let remaining=[]; for(let lot of state.lots){ if(lot.expiryDay<currentDay){ expiryAlerts.push(`⚠️ [اليوم ${currentDay}] صنف "${prod}" : كمية (${lot.qty.toFixed(3)} ${state.uom}) - مطلوب المتابعة للكمية - لم يتم استخدامها/تحويلها/إتلافها.`); } else { remaining.push(lot); } }
+                
+                let remaining=[]; 
+                for(let lot of state.lots){ 
+                    if(lot.expiryDay<currentDay){ 
+                        expiryAlerts.push(`⚠️ [اليوم ${currentDay}] صنف "${prod}" : كمية (${lot.qty.toFixed(3)} ${state.uom}) - مطلوب المتابعة للكمية - لم يتم استخدامها/تحويلها/إتلافها.`); 
+                        droppedLotsQty.set(prod, (droppedLotsQty.get(prod)||0) + lot.qty); // حفظ الكمية التالفة لإظهارها في الملخص
+                    } else { 
+                        remaining.push(lot); 
+                    } 
+                }
                 state.lots=remaining;
+                
                 const calcEnd=state.lots.reduce((s,l)=>s+l.qty,0);
                 if(Math.abs(calcEnd-tx.endQty)>0.05) diffRecords.push({day:currentDay, product:prod, calculated:calcEnd, actual:tx.endQty, diff:calcEnd-tx.endQty});
             }
-            for(let [prod,state] of productState.entries()){ if(dayTx.has(prod)) continue; let upd=[]; for(let lot of state.lots){ if(lot.expiryDay<currentDay){ expiryAlerts.push(`⚠️ [اليوم ${currentDay}] صنف "${prod}" : رصيد (${lot.qty.toFixed(3)} ${state.uom}) - مطلوب المتابعة للكمية - لم يتم استخدامها/تحويلها/إتلافها.`); } else upd.push(lot); } state.lots=upd; }
+            for(let [prod,state] of productState.entries()){ 
+                if(dayTx.has(prod)) continue; 
+                let upd=[]; 
+                for(let lot of state.lots){ 
+                    if(lot.expiryDay<currentDay){ 
+                        expiryAlerts.push(`⚠️ [اليوم ${currentDay}] صنف "${prod}" : رصيد (${lot.qty.toFixed(3)} ${state.uom}) - مطلوب المتابعة للكمية - لم يتم استخدامها/تحويلها/إتلافها.`); 
+                        droppedLotsQty.set(prod, (droppedLotsQty.get(prod)||0) + lot.qty);
+                    } else {
+                        upd.push(lot); 
+                    }
+                } 
+                state.lots=upd; 
+            }
         }
+        
         const lastDay=daysDataRaw[daysDataRaw.length-1].dayIdx;
-        for(let [prod,state] of productState.entries()){ for(let lot of state.lots){ if(lot.expiryDay<=lastDay) expiryAlerts.push(`⚠️ بعد انتهاء الفترة: صنف "${prod}" لديه رصيد (${lot.qty.toFixed(3)} ${state.uom}) - مطلوب المتابعة للكمية - لم يتم استخدامها/تحويلها/إتلافها.`); } }
-        // إنشاء قائمة بالمنتجات التي لديها رصيد غير مستخدم (من expiryAlerts) لتمييز الصف في الملخص
-        const unusedProductsSet=new Set();
-        expiryAlerts.forEach(alert=>{ const match=alert.match(/صنف "([^"]+)"/); if(match) unusedProductsSet.add(match[1]); });
-        return { expiryAlerts, diffRecords, summaryPerDay, unusedProductsSet };
+        for(let [prod,state] of productState.entries()){ 
+            for(let lot of state.lots){ 
+                if(lot.expiryDay<=lastDay) {
+                    expiryAlerts.push(`⚠️ بعد انتهاء الفترة: صنف "${prod}" لديه رصيد (${lot.qty.toFixed(3)} ${state.uom}) - مطلوب المتابعة للكمية - لم يتم استخدامها/تحويلها/إتلافها.`); 
+                }
+            } 
+        }
+        
+        // حساب الكمية غير المستخدمة الفعلية (إجمالي الرصيد المتبقي + ما انتهت صلاحيته خلال الأيام)
+        const productUnusedQuantities = new Map(); 
+        for(let [prod,state] of productState.entries()){
+            let totalUnused = state.lots.reduce((sum, lot) => sum + lot.qty, 0) + (droppedLotsQty.get(prod) || 0);
+            if(totalUnused > 0) productUnusedQuantities.set(prod, totalUnused);
+        }
+        
+        const unusedProductsSet = new Set(productUnusedQuantities.keys());
+        
+        return { expiryAlerts, diffRecords, summaryPerDay, unusedProductsSet, productUnusedQuantities };
     }
 
-    function buildSummaryHTML(summaryPerDay, unusedSet){
+    function buildSummaryHTML(summaryPerDay, unusedSet, unusedQuantitiesMap){
         if(!summaryPerDay || summaryPerDay.length===0) return "<div>لا توجد بيانات ملخصة</div>";
-        // جمع كل الأصناف من جميع الأيام
         const allProductsSet=new Set();
         summaryPerDay.forEach(day=>{ day.rows.forEach(r=>allProductsSet.add(r.product)); });
         const productsSorted=Array.from(allProductsSet).sort();
-        // إنشاء الجدول الرئيسي: ثلاث مجموعات أعمدة
-        let html=`<table class="summary-table" style="min-width:1200px;"><thead><tr><th>الصنف</th><th>الوحدة</th>`;
+        let html=`<table class="summary-table" style="min-width:1400px;"><thead>`;
+        html+=`<tr><th rowspan="2">الصنف</th><th rowspan="2">الوحدة</th>`;
         for(let i=0;i<summaryPerDay.length;i++){
             const day=summaryPerDay[i];
             html+=`<th colspan="6" style="background:#b32b2b;">اليوم ${day.dayIdx}</th>`;
-            if(i<summaryPerDay.length-1) html+=`<th style="background:#d32f2f20; width:12px;"></th>`;
+            if(i<summaryPerDay.length-1) html+=`<th style="background:white; width:12px;"></th>`;
         }
-        html+=`<th style="background:#ff9800;">ملاحظة (كمية غير مستخدمة)</th></tr><tr>`;
-        html+=`<th></th><th></th>`;
+        html+=`<th rowspan="2" style="background:#ff9800;">الكمية غير المستخدمة</th><th rowspan="2" style="background:#ff7043;">ملاحظة (كمية غير مستخدمة)</th>`;
+        html+=`</tr>`;
+        html+=`<tr>`;
         for(let i=0;i<summaryPerDay.length;i++){
-            html+=`<th>رصيد أول</th><th>استلام</th><th>بيع</th><th>مجمل الحركة</th><th>رصيد آخر</th><th>تفاصيل (داخل/خارج)</th>`;
-            if(i<summaryPerDay.length-1) html+=`<th></th>`;
+            html+=`<th>رصيد أول</th><th>استلام</th><th>بيع</th><th>داخل/خارج</th><th>رصيد آخر</th><th>تفاصيل</th>`;
+            if(i<summaryPerDay.length-1) html+=`<th style="background:white;"></th>`;
         }
-        html+=`<th>مطلوب متابعة</th></tr></thead><tbody>`;
+        html+=`</tr></thead><tbody>`;
 
         for(let prod of productsSorted){
-            let rowHighlight=false;
-            if(unusedSet.has(prod)) rowHighlight=true;
-            let trClass=rowHighlight?"highlight":"";
-            html+=`<tr class="${trClass}">`;
-            html+=`<td style="font-weight:bold;">${prod}</td><td>`;
-            // وحدة (من أي يوم)
             let uomVal="";
             for(let day of summaryPerDay){ let r=day.rows.find(rr=>rr.product===prod); if(r&&r.uom){ uomVal=r.uom; break; } }
-            html+=`${uomVal}</td>`;
+            const unusedQty = unusedQuantitiesMap.get(prod) || 0;
+            const rowHighlight = unusedQty > 0;
+            html+=`<tr ${rowHighlight?'class="highlight"':''}>`;
+            html+=`<td style="font-weight:bold;">${prod}</td><td>${uomVal}</td>`;
             for(let idx=0; idx<summaryPerDay.length; idx++){
                 const day=summaryPerDay[idx];
                 const rowData=day.rows.find(r=>r.product===prod);
@@ -213,31 +256,31 @@
                     const start=rowData.startQty.toFixed(2);
                     const rec=rowData.recdQty.toFixed(2);
                     const usage=rowData.actUsage.toFixed(2);
-                    const totalIn=rowData.totalIn.toFixed(2);
-                    const totalOut=rowData.totalOut.toFixed(2);
+                    const movement=`د:${rowData.totalIn.toFixed(2)} / خ:${rowData.totalOut.toFixed(2)}`;
                     const end=rowData.endQty.toFixed(2);
-                    const movementDetail=`د:${totalIn} / خ:${totalOut}`;
-                    html+=`<td>${start}</td><td>${rec}</td><td>${usage}</td><td>${movementDetail}</td><td>${end}</td><td style="font-size:0.75rem;">${rowData.tranIn>0||rowData.tranOut>0||rowData.returnQty>0||rowData.wasteQty>0?"تحويلات/مرتجعات/توالف":""}</td>`;
+                    const detail=(rowData.tranIn>0||rowData.tranOut>0||rowData.returnQty>0||rowData.wasteQty>0)?"تحويلات/مرتجعات":"-";
+                    html+=`<td>${start}</td><td>${rec}</td><td>${usage}</td><td>${movement}</td><td>${end}</td><td style="font-size:0.7rem;">${detail}</td>`;
                 } else {
                     html+=`<td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>`;
                 }
-                if(idx<summaryPerDay.length-1) html+=`<td class="day-separator"></td>`;
+                if(idx<summaryPerDay.length-1) html+=`<td style="background:white;"></td>`;
             }
-            // عمود الملاحظة: إذا كان المنتج في unusedSet يظهر تحذير
-            if(unusedSet.has(prod)){
-                html+=`<td style="background:#ffb74d; color:#a12222; font-weight:bold;"><i class="fas fa-exclamation-triangle"></i> كمية غير مستخدمة / مطلوب متابعة</td>`;
+            if(unusedQty>0){
+                html+=`<td class="unused-qty-col">${unusedQty.toFixed(3)} ${uomVal}</td>`;
+                html+=`<td class="note-col"><i class="fas fa-exclamation-triangle"></i> كمية غير مستخدمة - مطلوب متابعة</td>`;
             } else {
-                html+=`<td>-</td>`;
+                html+=`<td>-</td><td style="background:#e0e0e0;">لا توجد كمية غير مستخدمة</td>`;
             }
             html+=`</tr>`;
         }
-        html+=`</tbody></table>`;
+        html+=`</tbody>`;
+        html+=`</table>`;
         return html;
     }
 
     function renderAll(result){
         if(!result) return;
-        const {expiryAlerts, diffRecords, summaryPerDay, unusedProductsSet}=result;
+        const {expiryAlerts, diffRecords, summaryPerDay, unusedProductsSet, productUnusedQuantities}=result;
         const expiryList=document.getElementById('expiryAlertList');
         if(expiryAlerts.length===0) expiryList.innerHTML='<li style="background:#e8f5e9;">✔️ لا توجد كميات مطلوب متابعتها</li>';
         else expiryList.innerHTML=expiryAlerts.map(a=>`<li>${a}</li>`).join('');
@@ -245,7 +288,7 @@
         if(diffRecords.length===0) diffTbody.innerHTML='<tr><td colspan="5">✔️ جميع الأرصدة متطابقة</td></tr>';
         else diffTbody.innerHTML=diffRecords.map(r=>`<tr><td>اليوم ${r.day}</td><td>${r.product}</td><td>${r.calculated.toFixed(3)}</td><td>${r.actual.toFixed(3)}</td><td style="color:${r.diff>0?'#d32f2f':'#2e7d32'}">${r.diff>0?'+':''}${r.diff.toFixed(3)}</td></tr>`).join('');
         const summaryContainer=document.getElementById('summaryTablesContainer');
-        if(summaryPerDay && summaryPerDay.length) summaryContainer.innerHTML=buildSummaryHTML(summaryPerDay, unusedProductsSet);
+        if(summaryPerDay && summaryPerDay.length) summaryContainer.innerHTML=buildSummaryHTML(summaryPerDay, unusedProductsSet, productUnusedQuantities);
         else summaryContainer.innerHTML="<div>لا توجد بيانات لعرض الملخص</div>";
         window.currentFullResult=result;
     }
@@ -265,34 +308,99 @@
         if(res) renderAll(res);
     });
 
-    // تصدير PDF باستخدام html2canvas (أفقي للملخص والصلاحية، رأسي للاختلافات)
+    // دالة تصدير الـ PDF المعدّلة بالكامل
     async function exportGenericPDF(elementId, title, orientation, fileName){
         const originalElem=document.getElementById(elementId);
         if(!originalElem || (originalElem.innerText.includes("لا توجد") && originalElem.innerText.includes("بيانات"))){ alert("لا توجد بيانات للتصدير"); return; }
-        const container=document.createElement('div'); container.style.position='fixed'; container.style.top='-9999px'; container.style.left='0'; container.style.width=orientation==='landscape'?'1123px':'794px'; container.style.background='#fff'; container.style.direction='rtl'; container.style.padding='20px'; container.style.boxSizing='border-box'; document.body.appendChild(container);
-        const logoImg=document.getElementById('companyLogoImg'); let logoSrc=''; if(logoImg && logoImg.src) logoSrc=logoImg.src;
-        const headerDiv=document.createElement('div'); headerDiv.style.display='flex'; headerDiv.style.alignItems='center'; headerDiv.style.gap='15px'; headerDiv.style.marginBottom='20px'; headerDiv.style.borderBottom='2px solid #d32f2f'; headerDiv.style.paddingBottom='10px';
-        if(logoSrc){ const img=document.createElement('img'); img.src=logoSrc; img.style.height='50px'; headerDiv.appendChild(img); }
-        const titleDiv=document.createElement('div'); titleDiv.innerHTML=`<h2 style="color:#b32b2b;">شركة نايف للأغذية</h2><h3>${title}</h3>`; headerDiv.appendChild(titleDiv);
-        container.appendChild(headerDiv);
-        const contentClone=originalElem.cloneNode(true); contentClone.style.maxHeight='none'; contentClone.style.overflow='visible'; container.appendChild(contentClone);
-        const {jsPDF}=window.jspdf; const pdf=new jsPDF(orientation==='landscape'?'l':'p','pt','a4');
-        const pages=Array.from(container.children);
-        for(let i=0;i<pages.length;i++){
-            const canvas=await html2canvas(pages[i],{scale:2,backgroundColor:'#fff'});
-            const imgData=canvas.toDataURL('image/jpeg',1.0); const imgWidth=pdf.internal.pageSize.getWidth(); const imgHeight=(canvas.height*imgWidth)/canvas.width;
-            if(i>0) pdf.addPage(); pdf.addImage(imgData,'JPEG',0,0,imgWidth,imgHeight);
+        
+        // إنشاء حاوية رئيسية تجمع العنوان والجدول لمنع فصلهما
+        const container = document.createElement('div');
+        container.style.position = 'fixed';
+        container.style.top = '-9999px';
+        container.style.left = '0';
+        // إعطاء الحاوية عرض كبير لضمان عدم قص أي عمود أثناء التصوير
+        container.style.width = orientation === 'landscape' ? '1600px' : '900px';
+        container.style.background = '#fff';
+        container.style.direction = 'rtl';
+        container.style.padding = '30px';
+        container.style.boxSizing = 'border-box';
+        
+        // إنشاء ترويسة العنوان
+        const headerDiv = document.createElement('div');
+        headerDiv.style.display = 'flex';
+        headerDiv.style.alignItems = 'center';
+        headerDiv.style.gap = '20px';
+        headerDiv.style.marginBottom = '25px';
+        headerDiv.style.borderBottom = '3px solid #d32f2f';
+        headerDiv.style.paddingBottom = '15px';
+        
+        const logoImg = document.getElementById('companyLogoImg');
+        let logoSrc = ''; if(logoImg && logoImg.src) logoSrc = logoImg.src;
+        if(logoSrc){ 
+            const img = document.createElement('img'); 
+            img.src = logoSrc; 
+            img.style.height = '60px'; 
+            headerDiv.appendChild(img); 
         }
-        pdf.save(fileName); document.body.removeChild(container);
+        
+        const titleDiv = document.createElement('div');
+        titleDiv.innerHTML = `<h2 style="color:#b32b2b; margin-bottom:5px;">شركة نايف للأغذية</h2><h3 style="color:#2c3e66; margin:0;">${title}</h3>`;
+        headerDiv.appendChild(titleDiv);
+        container.appendChild(headerDiv);
+        
+        // نسخ محتوى الجدول
+        const contentClone = originalElem.cloneNode(true);
+        contentClone.style.maxHeight = 'none';
+        contentClone.style.overflow = 'visible';
+        
+        container.appendChild(contentClone);
+        document.body.appendChild(container);
+        
+        // التصوير بجودة عالية
+        const canvas = await html2canvas(container, {
+            scale: 2, 
+            backgroundColor: '#ffffff',
+            useCORS: true
+        });
+        
+        document.body.removeChild(container);
+        
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        const {jsPDF} = window.jspdf;
+        const pdf = new jsPDF(orientation === 'landscape' ? 'l' : 'p', 'pt', 'a4');
+        
+        // حساب الأبعاد للملائمة على حجم صفحة A4 برمجياً
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+        
+        let heightLeft = imgHeight;
+        let position = 0;
+        
+        // إضافة الصفحة الأولى
+        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+        heightLeft -= pdfHeight;
+        
+        // تقسيم الصورة للصفحات التالية إذا كان الجدول طويلاً جداً
+        while (heightLeft > 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+            heightLeft -= pdfHeight;
+        }
+        
+        pdf.save(fileName);
     }
+
     document.getElementById('exportExpiryPdfBtn').addEventListener('click',()=>{ if(window.currentFullResult?.expiryAlerts?.length) exportGenericPDF('expiryAlertList','تقرير الكميات المطلوب متابعتها','landscape','تقرير_متابعة_نايف.pdf'); else alert("لا توجد بيانات"); });
     document.getElementById('exportDiffPdfBtn').addEventListener('click',()=>{ if(window.currentFullResult?.diffRecords?.length) exportGenericPDF('diffTable','تقرير اختلافات الرصيد','portrait','تقرير_اختلاف_الرصيد.pdf'); else alert("لا توجد اختلافات"); });
     document.getElementById('exportSummaryPdfBtn').addEventListener('click',()=>{ if(window.currentFullResult?.summaryPerDay?.length) exportGenericPDF('summaryTablesContainer','ملخص الصلاحية اليومي (ثلاثة أيام)','landscape','ملخص_الصلاحية_نايف.pdf'); else alert("لا توجد بيانات ملخص"); });
 
-    // التبويبات
     const btns=document.querySelectorAll('.tab-btn');
     const panes={expiry:document.getElementById('expiryPane'), diff:document.getElementById('diffPane'), summary:document.getElementById('summaryPane')};
     btns.forEach(btn=>{ btn.addEventListener('click',()=>{ const t=btn.dataset.tab; btns.forEach(b=>b.classList.remove('active')); btn.classList.add('active'); Object.values(panes).forEach(p=>p.classList.remove('active')); if(t==='expiry') panes.expiry.classList.add('active'); else if(t==='diff') panes.diff.classList.add('active'); else if(t==='summary') panes.summary.classList.add('active'); }); });
+    
+    document.querySelector('.tab-btn[data-tab="summary"]').click();
 </script>
 </body>
 </html>
